@@ -247,14 +247,14 @@ receiveInput h e =
                      Right (sexp, id) -> return (sexp, id)
      putIState $ i { idris_outputmode = IdeMode id h }
      case IdeMode.sexpToCommand sexp of
-       Just (IdeMode.REPLCompletions prefix) ->
+       IdeMode.REPLCompletions prefix ->
          do (unused, compls) <- proverCompletion (assumptionNames e) (reverse prefix, "")
             let good = IdeMode.SexpList [IdeMode.SymbolAtom "ok", IdeMode.toSExp (map replacement compls, reverse unused)]
             idemodePutSExp "return" good
             receiveInput h e
-       Just (IdeMode.Interpret cmd) -> return (Just cmd)
-       Just (IdeMode.TypeOf str) -> return (Just (":t " ++ str))
-       Just (IdeMode.DocsFor str _) -> return (Just (":doc " ++ str))
+       IdeMode.Interpret cmd -> return (Just cmd)
+       IdeMode.TypeOf str -> return (Just (":t " ++ str))
+       IdeMode.DocsFor str _ -> return (Just (":doc " ++ str))
        _ -> return Nothing
 
 data ElabShellHistory = ElabStep | LetStep | BothStep
