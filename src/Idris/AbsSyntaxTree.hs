@@ -5,7 +5,7 @@ Copyright   :
 License     : BSD3
 Maintainer  : The Idris Community.
 -}
-{-# LANGUAGE DeriveDataTypeable, DeriveFunctor, DeriveGeneric,
+{-# LANGUAGE DeriveDataTypeable, DeriveFunctor, DeriveGeneric, GeneralizedNewtypeDeriving,
              FlexibleInstances, MultiParamTypeClasses, PatternGuards,
              TypeSynonymInstances #-}
 
@@ -17,6 +17,7 @@ import Idris.Core.Evaluate
 import Idris.Core.TT
 import Idris.Core.Typecheck
 import Idris.Docstrings
+import qualified Idris.IdeMode as IdeMode
 import IRTS.CodegenCommon
 import IRTS.Lang
 import Util.DynamicLinker
@@ -28,6 +29,9 @@ import Control.Applicative ((<|>))
 import qualified Control.Monad.Trans.Class as Trans (lift)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State.Strict
+import Control.Monad.Trans.Free
+import Control.Monad.Trans.Class
+import Control.Monad.IO.Class
 import Data.Char
 import Data.Data (Data)
 import Data.Either
@@ -403,7 +407,25 @@ idrisInit = IState initContext S.empty []
                    AutomaticWidth S.empty S.empty [] Nothing Nothing [] [] M.empty [] [] []
                    emptyContext S.empty M.empty emptyContext
 
+data Extension a = RunIdeCommand IdeMode.SExp (Bool -> a)
+  deriving (Functor)
+{-
+type ExtensionHandler a = Extension (IO a) -> IO a
 
+defaultExtHandler :: ExtensionHandler a
+defaultExtHandler (RunIdeCommand _ k) = k False
+
+newtype ExtIO a = ExtIO { runExtIO :: FreeT Extension IO a }
+  deriving (Functor, Applicative, Monad, MonadIO)
+
+instance MonadException ExtIO where
+  controlIO f = ExtIO . FreeT . controlIO $ \(RunIO run) -> let
+                  run' = RunIO (fmap (ExtIO . FreeT) . run . runFreeT . runExtIO)
+                  in fmap (runFreeT . runExtIO) $ f run'
+
+ignoreExtensions :: ExtIO a -> IO a
+ignoreExtensions = iterT defaultExtHandler . runExtIO
+-}
 -- | The monad for the main REPL - reading and processing files and
 -- updating global state (hence the IO inner monad).
 --
@@ -411,10 +433,10 @@ idrisInit = IState initContext S.empty []
 --     type Idris = WriterT [Either String (IO ())] (State IState a))
 -- @
 --
-type Idris = StateT IState (ExceptT Err IO)
+type Idris = FreeT Extension (StateT IState (ExceptT Err IO))
 
 catchError :: Idris a -> (Err -> Idris a) -> Idris a
-catchError = liftCatch catchE
+catchError i f = liftCatch catchE i f
 
 throwError :: Err -> Idris a
 throwError = Trans.lift . throwE

@@ -152,7 +152,7 @@ execIO = lift . lift
 execute :: Term -> Idris Term
 execute tm = do est <- initState
                 ctxt <- getContext
-                res <- lift . lift . flip runExec est $
+                res <- lift . lift . ExtIO . lift . flip runExec est $
                          do res <- doExec [] ctxt tm
                             toTT res
                 case res of

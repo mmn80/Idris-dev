@@ -82,4 +82,4 @@ runIdris opts = do
 main :: IO ()
 main = do
   opts <- runArgParser
-  runMain (runIdris opts)
+  runMain (runIdris opts) defaultExtHandler

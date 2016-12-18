@@ -39,6 +39,7 @@ import Control.Monad
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Except (runExceptT)
 import Control.Monad.Trans.State.Strict (execStateT)
+import Control.Monad.Trans.Free (iterT)
 import Data.Maybe
 import System.Console.Haskeline as H
 import System.Directory
@@ -48,9 +49,9 @@ import System.IO
 import Text.Trifecta.Result (ErrInfo(..), Result(..))
 
 -- | How to run Idris programs.
-runMain :: Idris () -> IO ()
-runMain prog = do res <- runExceptT $ execStateT prog idrisInit
-                  case res of
+runMain :: Idris () -> ExtensionHandler a -> IO ()
+runMain prog h = do res <- iterT h . runExtIO . runExceptT $ execStateT prog idrisInit
+                    case res of
                        Left err -> do
                          putStrLn $ "Uncaught error: " ++ show err
                          exitFailure

@@ -175,7 +175,7 @@ processNetCmd :: IState -> IState -> Handle -> FilePath -> String ->
 processNetCmd orig i h fn cmd
     = do res <- case parseCmd i "(net)" cmd of
                   Failure (ErrInfo err _) -> return (Left (Msg " invalid command"))
-                  Success (Right c) -> runExceptT $ evalStateT (processNet fn c) i
+                  Success (Right c) -> ignoreExtensions $ runExceptT $ evalStateT (processNet fn c) i
                   Success (Left err) -> return (Left (Msg err))
          case res of
               Right x -> return x

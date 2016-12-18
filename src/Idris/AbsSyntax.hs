@@ -82,7 +82,7 @@ addDyLib libs = do i <- getIState
                    case mapMaybe (findDyLib ls) libs of
                      x:_ -> return (Left x)
                      [] -> do
-                       handle <- lift . lift .
+                       handle <- lift . lift . ExtIO . lift .
                                  mapM (\l -> catchIO (tryLoadLib importdirs l)
                                                      (\_ -> return Nothing)) $ libs
                        case msum handle of
